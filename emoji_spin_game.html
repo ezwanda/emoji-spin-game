@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Spin Game</title>
+    <!-- Using Google Fonts for 'Londrina Solid' (fun/elegant) and 'Inter' -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Londrina+Solid:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5dc; /* Light beige background */
+            margin: 0;
+            overflow: hidden; /* Prevent scroll on blur */
+        }
+
+        .game-container {
+            background-color: #fff;
+            padding: 2.5rem; /* Increased padding */
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1); /* Softer shadow */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2.5rem; /* Increased gap */
+            position: relative; /* For blur overlay */
+            overflow: hidden; /* Ensure blur doesn't overflow */
+            max-width: 90%; /* Responsive width */
+            width: 500px; /* Max width for desktop */
+        }
+
+        .blur-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(0px); /* Initial state */
+            background-color: rgba(0, 0, 0, 0); /* Initial transparent background */
+            transition: backdrop-filter 0.5s ease-out, background-color 0.5s ease-out; /* Transition both */
+            pointer-events: none; /* Allow interaction through by default */
+            z-index: 10;
+        }
+
+        .blur-overlay.active {
+            backdrop-filter: blur(10px); /* Blurred state */
+            background-color: rgba(0, 0, 0, 0.6); /* Increased semi-transparent black tint */
+            pointer-events: auto; /* Block interaction when active */
+        }
+
+        .title-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .party-poppers {
+            font-size: 2.5rem; /* Size of party poppers */
+            margin-bottom: 0.5rem;
+            line-height: 1; /* Adjust line height to prevent extra space */
+        }
+
+        .title {
+            font-family: 'Londrina Solid', cursive; /* New fun and elegant font */
+            font-size: 3.2rem; /* Adjusted title font size to fit on one line */
+            font-weight: 900; /* Use bolder weight for Londrina Solid */
+            color: #ff6347; /* Tomato red for a playful feel */
+            text-align: center;
+            text-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2), /* Stronger shadow */
+                         0 0 10px rgba(255, 165, 0, 0.7); /* Subtle orange glow */
+            white-space: nowrap; /* Keep text on a single line */
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 20rem; /* Increased wheel size */
+            height: 20rem; /* Increased wheel size */
+            border-radius: 50%;
+            border: 0.125rem solid #e0e0e0; /* Thin outer border */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Transition for spin will be set dynamically in JS for consistent momentum */
+            box-shadow: inset 0 0 1rem rgba(0, 0, 0, 0.05); /* Inner subtle shadow */
+        }
+        
+        .emoji-wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .emoji-item {
+            position: absolute;
+            width: 5rem; /* Emoji size */
+            height: 5rem; /* Emoji size */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%; /* For the glow background */
+        }
+
+        .emoji-item img {
+            width: 90%; /* Fit emoji image within its container */
+            height: 90%;
+            object-fit: contain;
+            filter: drop-shadow(0 0.2rem 0.4rem rgba(0,0,0,0.1)); /* Subtle shadow for emoji */
+        }
+
+        /* Radial background for emoji glow */
+        .emoji-item:nth-child(1) { background: radial-gradient(circle at center, #ffd70040, transparent 70%); } /* Gold */
+        .emoji-item:nth-child(2) { background: radial-gradient(circle at center, #32cd3240, transparent 70%); } /* LimeGreen */
+        .emoji-item:nth-child(3) { background: radial-gradient(circle at center, #8a2be240, transparent 70%); } /* BlueViolet */
+        .emoji-item:nth-child(4) { background: radial-gradient(circle at center, #ff69b440, transparent 70%); } /* HotPink */
+        .emoji-item:nth-child(5) { background: radial-gradient(circle at center, #00ced140, transparent 70%); } /* DarkTurquoise */
+        .emoji-item:nth-child(6) { background: radial-gradient(circle at center, #ff450040, transparent 70%); } /* OrangeRed */
+
+
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Gap between buttons/timer */
+            z-index: 20; /* Ensure controls are above overlay */
+        }
+
+        .spin-button {
+            /* Colorful Chrome Effect */
+            background: linear-gradient(145deg, #a4a4a4 0%, #d4d4d4 25%, #a4a4a4 50%, #d4d4d4 75%, #a4a4a4 100%);
+            background-size: 200% 200%; /* For animation */
+            color: #222; /* Darker text for contrast */
+            font-size: 1.75rem;
+            font-weight: bold;
+            padding: 1rem 3rem;
+            border: 0.15rem solid #777; /* Slightly thicker border */
+            border-radius: 2.5rem;
+            cursor: pointer;
+            box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5), /* Stronger shadow */
+                        inset 0 0.2rem 0.5rem rgba(255, 255, 255, 0.7), /* Inner highlight */
+                        0 0 25px rgba(135, 206, 250, 0.7), /* Light blue glow */
+                        0 0 40px rgba(135, 206, 250, 0.5); /* Larger blue glow */
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); /* Smoother transition */
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            animation: chrome-shine 3s infinite linear; /* Chrome shine animation */
+        }
+
+        @keyframes chrome-shine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .spin-button:hover {
+            background-position: 100% 50%; /* Shift background on hover */
+            transform: translateY(-0.2rem) scale(1.05); /* More pronounced lift and scale */
+            box-shadow: 0 0.9rem 1.8rem rgba(0, 0, 0, 0.6),
+                        inset 0 0.3rem 0.6rem rgba(255, 255, 255, 0.8),
+                        0 0 35px rgba(135, 206, 250, 1), /* Brighter glow */
+                        0 0 60px rgba(135, 206, 250, 0.8);
+            border-color: #999; /* Slightly darker border on hover */
+        }
+
+        .spin-button:active {
+            transform: translateY(0); /* Press effect */
+            box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.4);
+            filter: brightness(0.9);
+            animation: none; /* Stop shine animation on active */
+        }
+
+        .spin-button.blurred {
+            filter: blur(5px) grayscale(80%); /* Blur and desaturate when inactive */
+            pointer-events: none; /* Make button inactive when blurred */
+            cursor: default; /* Change cursor when inactive */
+            box-shadow: none; /* Remove glow when blurred */
+            animation: none; /* Stop animation when blurred */
+        }
+
+        .result-container {
+            position: absolute;
+            top: 50%; /* Centered vertically on the wheel */
+            left: 50%;
+            transform: translate(-50%, -50%); /* Ensures perfect centering */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Increased gap for better spacing */
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 15; /* Above wheel, below overlay if active */
+        }
+
+        .result-container.show {
+            opacity: 1;
+        }
+
+        .final-emoji {
+            width: 15rem; /* Even larger final emoji - increased again */
+            height: 15rem; /* Even larger final emoji - increased again */
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .final-emoji img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0.25rem 0.5rem rgba(0,0,0,0.2));
+        }
+
+        .glow-effect {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(2rem); /* Stronger blur for glow */
+            opacity: 0.7;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        .glow-effect.red { background: radial-gradient(circle, rgba(255, 99, 71, 0.7), transparent 70%); }
+        .glow-effect.green { background: radial-gradient(circle, rgba(50, 205, 50, 0.7), transparent 70%); }
+        .glow-effect.blue { background: radial-gradient(circle, rgba(66, 133, 244, 0.7), transparent 70%); }
+        .glow-effect.yellow { background: radial-gradient(circle, rgba(255, 215, 0, 0.7), transparent 70%); }
+        .glow-effect.purple { background: radial-gradient(circle, rgba(138, 43, 226, 0.7), transparent 70%); }
+        .glow-effect.pink { background: radial-gradient(circle, rgba(255, 105, 180, 0.7), transparent 70%); }
+
+
+        @keyframes pulse-glow {
+            from { transform: scale(0.9); opacity: 0.6; }
+            to { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .timer {
+            font-size: 2.8rem; /* Larger timer font */
+            font-weight: bold;
+            color: #ffecb3; /* Light golden color for pop */
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.8), /* Yellow glow for pop */
+                         0 0 20px rgba(255, 255, 0, 0.6);
+            /* Add a subtle pulse animation for the timer */
+            animation: timer-pop 1.5s infinite alternate ease-in-out;
+        }
+        
+        @keyframes timer-pop {
+            from { transform: scale(1); text-shadow: 0 0 10px rgba(255, 255, 0, 0.8); }
+            to { transform: scale(1.05); text-shadow: 0 0 15px rgba(255, 255, 0, 1), 0 0 25px rgba(255, 255, 0, 0.8); }
+        }
+
+
+        .timer.show {
+            opacity: 1;
+        }
+
+        .stop-button {
+            /* Stylish Stop Button */
+            background: linear-gradient(to bottom, #d9534f 0%, #c9302c 100%); /* Stronger red gradient */
+            color: white;
+            font-size: 1.35rem; /* Slightly larger font */
+            font-weight: bold;
+            padding: 0.8rem 2.8rem; /* Adjusted padding */
+            border: 0.125rem solid #a42622; /* Dark red border */
+            border-radius: 2.2rem; /* Slightly more rounded */
+            cursor: pointer;
+            transition: all 0.2s ease; /* Faster transition */
+            box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.4), /* Deeper shadow */
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2); /* Subtle highlight */
+            opacity: 0;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .stop-button:hover {
+            background: linear-gradient(to bottom, #e3605c 0%, #d43b37 100%); /* Lighter red on hover */
+            transform: translateY(-0.15rem); /* More pronounced lift */
+            box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.5);
+        }
+
+        .stop-button:active {
+            transform: translateY(0);
+            filter: brightness(0.9);
+            box-shadow: 0 0.2rem 0.4rem rgba(0, 0, 0, 0.3);
+        }
+
+        .stop-button.show {
+            opacity: 1;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .title {
+                font-size: 2.25rem; /* Adjusted for tablet */
+            }
+
+            .wheel-container {
+                width: 16rem;
+                height: 16rem;
+            }
+
+            .emoji-item {
+                width: 4rem;
+                height: 4rem;
+            }
+
+            .spin-button {
+                font-size: 1.25rem;
+                padding: 0.8rem 2rem;
+            }
+
+            .final-emoji {
+                width: 12rem; /* Adjusted for smaller screens */
+                height: 12rem;
+            }
+
+            .timer {
+                font-size: 2rem;
+            }
+
+            .stop-button {
+                font-size: 1.1rem;
+                padding: 0.6rem 1.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .title {
+                font-size: 1.75rem; /* Adjusted for mobile */
+            }
+
+            .wheel-container {
+                width: 12rem;
+                height: 12rem;
+            }
+
+            .emoji-item {
+                width: 3rem;
+                height: 3rem;
+            }
+
+            .spin-button {
+                font-size: 1rem;
+                padding: 0.6rem 1.5rem;
+            }
+
+            .final-emoji {
+                width: 10rem; /* Adjusted for smaller screens */
+                height: 10rem;
+            }
+
+            .timer {
+                font-size: 1.75rem;
+            }
+
+            .stop-button {
+                font-size: 1rem;
+                padding: 0.5rem 1.5rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="blur-overlay" id="blurOverlay"></div>
+
+        <div class="title-section">
+            <div class="party-poppers">🎉 🎉 🎉</div>
+            <h1 class="title">Emoji Spin Game</h1>
+        </div>
+
+        <div class="wheel-container" id="wheelContainer">
+            <div class="emoji-wrapper">
+                <!-- Emojis will be dynamically added here -->
+            </div>
+        </div>
+
+        <div class="control-section">
+            <button class="spin-button" id="spinButton">
+                SPIN
+            </button>
+
+            <div class="result-container" id="resultContainer">
+                <div class="final-emoji" id="finalEmojiContainer">
+                    <!-- Final emoji and glow will be dynamically added here -->
+                </div>
+                <div class="timer" id="timerDisplay">0</div>
+                <button class="stop-button" id="stopButton">STOP</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const wheelContainer = document.getElementById('wheelContainer');
+            const emojiWrapper = wheelContainer.querySelector('.emoji-wrapper');
+            const spinButton = document.getElementById('spinButton');
+            const resultContainer = document.getElementById('resultContainer');
+            const finalEmojiContainer = document.getElementById('finalEmojiContainer');
+            const timerDisplay = document.getElementById('timerDisplay');
+            const stopButton = document.getElementById('stopButton');
+            const blurOverlay = document.getElementById('blurOverlay');
+
+            // Using relative paths for PNG images
+            const emojiFiles = [
+                'emoji1.png',
+                'emoji2.png',
+                'emoji3.png',
+                'emoji4.png',
+                'emoji5.png',
+                'emoji6.png'
+            ];
+
+            const glowColors = [
+                'red', 'green', 'blue', 'yellow', 'purple', 'pink'
+            ];
+
+            let timerInterval;
+            let timerCount = 0;
+            let isSpinning = false;
+            let currentWheelRotation = 0; // To keep track of the wheel's accumulated rotation
+
+            // Function to load emojis and place them around the wheel
+            function loadEmojis() {
+                emojiWrapper.innerHTML = ''; // Clear existing emojis to prevent duplicates on resize
+
+                const numEmojis = emojiFiles.length;
+                const angleStep = 360 / numEmojis;
+                const wheelVisualRadius = wheelContainer.offsetWidth / 2;
+                const emojiItemPixelSize = 5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+                const placementRadius = wheelVisualRadius - (emojiItemPixelSize / 2) - (wheelVisualRadius * 0.05);
+
+                emojiFiles.forEach((src, index) => {
+                    const emojiItem = document.createElement('div');
+                    emojiItem.classList.add('emoji-item');
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.alt = `Emoji ${index + 1}`;
+                    emojiItem.appendChild(img);
+
+                    const angleRad = (index * angleStep - 90) * Math.PI / 180;
+                    const x = placementRadius * Math.cos(angleRad);
+                    const y = placementRadius * Math.sin(angleRad);
+
+                    emojiItem.style.left = `calc(50% + ${x}px)`;
+                    emojiItem.style.top = `calc(50% + ${y}px)`;
+                    emojiItem.style.transform = `translate(-50%, -50%)`; 
+
+                    emojiWrapper.appendChild(emojiItem);
+
+                    // Counter-rotate the image to keep it upright regardless of its position on the wheel
+                    img.style.transform = `rotate(${-(index * angleStep)}deg)`; 
+                });
+            }
+
+            // Call loadEmojis after the wheelContainer has its initial size
+            window.addEventListener('load', () => {
+                loadEmojis();
+            });
+
+            // Handle window resize to re-position emojis correctly
+            window.addEventListener('resize', () => {
+                loadEmojis();
+            });
+
+            spinButton.addEventListener('click', () => {
+                if (isSpinning) return; // Prevent multiple spins
+                isSpinning = true;
+
+                // Reset state for a new spin
+                resultContainer.classList.remove('show');
+                finalEmojiContainer.innerHTML = '';
+                timerDisplay.classList.remove('show');
+                stopButton.classList.remove('show');
+                clearInterval(timerInterval);
+                timerCount = 0;
+                timerDisplay.textContent = '0';
+                
+                // Ensure blur-overlay is off at start of spin
+                blurOverlay.classList.remove('active');
+                // Spin button stays active/clear during the spin
+                spinButton.classList.remove('blurred');
+
+
+                // Spin logic: at least 5 full rotations + a random angle to stop at
+                const minSpins = 5;
+                const randomStopAngle = Math.floor(Math.random() * 360); // Random angle between 0 and 359 degrees
+                const totalRotationToAdd = (minSpins * 360) + randomStopAngle;
+                currentWheelRotation += totalRotationToAdd; // Accumulate rotation
+
+                // Apply the rotation transform to the wheel
+                wheelContainer.style.transition = 'transform 6s cubic-bezier(0.25, 0.1, 0.25, 1)'; // Set transition here
+                wheelContainer.style.transform = `rotate(${currentWheelRotation}deg)`; // Apply accumulated rotation
+
+                // Determine the winning emoji (simplified to random selection for visual effect)
+                const numEmojis = emojiFiles.length;
+                const selectedEmojiIndex = Math.floor(Math.random() * numEmojis); 
+                const selectedEmojiSrc = emojiFiles[selectedEmojiIndex];
+                const selectedGlowColor = glowColors[selectedEmojiIndex];
+
+                // Set a timeout for when the spin animation completes
+                setTimeout(() => {
+                    isSpinning = false; // Allow new spins after the current one finishes
+
+                    // Activate background blur AFTER spin stops
+                    blurOverlay.classList.add('active');
+                    // Blur spin button and make it inactive when results are displayed
+                    spinButton.classList.add('blurred'); 
+                    
+                    // Display the final selected emoji as an overlay
+                    const finalImg = document.createElement('img');
+                    finalImg.src = selectedEmojiSrc;
+                    finalImg.alt = "Result Emoji";
+
+                    const glowDiv = document.createElement('div');
+                    glowDiv.classList.add('glow-effect', selectedGlowColor);
+                    glowDiv.style.width = `calc(100% + 4rem)`; /* Make glow larger */
+                    glowDiv.style.height = `calc(100% + 4rem)`; /* Make glow larger */
+
+                    finalEmojiContainer.innerHTML = ''; // Clear any previous result
+                    finalEmojiContainer.appendChild(glowDiv);
+                    finalEmojiContainer.appendChild(finalImg);
+                    resultContainer.classList.add('show'); // Show the result container
+
+                    // Start the timer
+                    timerCount = 0;
+                    timerDisplay.textContent = timerCount;
+                    timerDisplay.classList.add('show');
+                    stopButton.classList.add('show');
+
+                    timerInterval = setInterval(() => {
+                        timerCount++;
+                        timerDisplay.textContent = timerCount;
+                    }, 1000); // Update timer every second
+
+                }, 6000); // This timeout should match the CSS transition duration
+            });
+
+            stopButton.addEventListener('click', () => {
+                // Stop the timer when the STOP button is clicked
+                clearInterval(timerInterval);
+
+                // Return to initial stage after 2 seconds
+                setTimeout(() => {
+                    resultContainer.classList.remove('show'); // Hide result container
+                    timerDisplay.classList.remove('show');     // Hide timer
+                    stopButton.classList.remove('show');       // Hide stop button
+                    blurOverlay.classList.remove('active');    // Remove background blur
+                    
+                    // Make spin button active again for the next player
+                    spinButton.classList.remove('blurred');    
+
+                    // Reset wheel transformation to its original state for consistent momentum
+                    // Adding a tiny delay with requestAnimationFrame ensures browser processes previous styles
+                    requestAnimationFrame(() => {
+                        wheelContainer.style.transition = 'none'; // Disable transition for instant reset
+                        wheelContainer.style.transform = 'rotate(0deg)'; // Reset to 0 degrees
+                        currentWheelRotation = 0; // Reset accumulated rotation
+                        
+                        // Re-enable transition for the next spin
+                        requestAnimationFrame(() => {
+                            wheelContainer.style.transition = 'transform 6s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                        });
+                    });
+
+                }, 2000); // 2-second delay
+            });
+        });
+    </script>
+</body>
+</html>
